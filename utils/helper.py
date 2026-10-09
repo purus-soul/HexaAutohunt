@@ -1,57 +1,119 @@
-from asyncio import sleep as zzz
-from random import randint
-from config import pokemon_to_catch
+import re
 
-async def handle_hunt(bot, chat, event=None):
-    """
-    Handles both initiating hunts and responding to encountered Pokémon.
-    """
-    if event:
-        # Handle incoming messages during a hunt
-        text = event.message.text
-        message = await bot.get_messages(chat, ids=event.message.id)
 
-        # Check if the encountered Pokémon is in the catch list
-        if any(pokemon in text for pokemon in pokemon_to_catch):
-            print(f"Encountered a Pokémon to catch: {text}")
-            await message.click(text="Battle")
-            await message.click(text="Battle")
-            await message.click(text="Battle")
-        elif "Shiny" in text:
-            print("Shiny encountered! Stopping the bot.")
-            bot.disconnect()
-        elif "TM" in text:
-            print(f"TM found: {text}")
-            await zzz(randint(5, 6))
-            await bot.send_message(chat, "/hunt")
-        elif "A wild" in text or "An expert" in text:
-            await zzz(randint(5, 6))
-            await bot.send_message(chat, "/hunt")
-    else:
-        # Initiate a new hunt
-        await bot.send_message(chat, "/hunt")
-        for i in range(5, 10000):
-            await zzz(randint(5000, 6020))
-            await bot.send_message(chat, "/hunt")
+WATCHLIST = [
+    "Pecharunt",
+    "Koraidon",
+    "Miraidon",
+    "Wo-Chien",
+    "Chien-Pao",
+    "Ting-Lu",
+    "Chi-Yu",
+    "Ogerpon",
+    "Terapagos",
+    "Zarude",
+    "Zacian",
+    "Zamazenta",
+    "Eternatus",
+    "Urshifu",
+    "Glastrier",
+    "Spectrier",
+    "Calyrex",
+    "Magearna",
+    "Marshadow",
+    "Zeraora",
+    "Type: Null",
+    "Silvally",
+    "Tapu Koko",
+    "Tapu Lele",
+    "Tapu Bulu",
+    "Tapu Fini",
+    "Cosmog",
+    "Cosmoem",
+    "Solgaleo",
+    "Lunala",
+    "Necrozma",
+    "Diancie",
+    "Hoopa",
+    "Volcanion",
+    "Xerneas",
+    "Yveltal",
+    "Zygarde",
+    "Victini",
+    "Keldeo",
+    "Meloetta",
+    "Genesect",
+    "Cobalion",
+    "Terrakion",
+    "Virizion",
+    "Tornadus",
+    "Thundurus",
+    "Reshiram",
+    "Zekrom",
+    "Landorus",
+    "Kyurem",
+    "Phione",
+    "Manaphy",
+    "Darkrai",
+    "Shaymin",
+    "Arceus",
+    "Uxie",
+    "Mesprit",
+    "Azelf",
+    "Dialga",
+    "Palkia",
+    "Heatran",
+    "Regigigas",
+    "Giratina",
+    "Cresselia",
+    "Jirachi",
+    "Deoxys",
+    "Regirock",
+    "Regice",
+    "Registeel",
+    "Latias",
+    "Latios",
+    "Kyogre",
+    "Groudon",
+    "Rayquaza",
+    "Mewtwo",
+]
 
-async def handle_catch(bot, event):
-    """
-    Handles catching Pokémon during battles.
-    """
-    message = await bot.get_messages(event.chat_id, ids=event.message.id)
-    text = event.message.text
 
-    # Check if the Pokémon is in the catch list
-    if any(pokemon in text for pokemon in pokemon_to_catch):
-        print(f"Attempting to catch: {text}")
-        await message.click(text="Poke Balls")
-        await message.click(text="Poke Balls")
-        await message.click(text="Poke Balls")
-        if "Wild" in text:
-            await zzz(2)
-            await message.click(text="Ultra")
-            await message.click(text="Ultra")
-            await message.click(text="Ultra")
-    if any(keyword in text for keyword in ['fled', 'fainted', 'caught']):
-        await zzz(randint(5, 6))
-        await bot.send_message(event.chat_id, "/hunt")
+def find_watchlist_match(text):
+    """Return (matched Pokémon name, shiny flag), or (None, False)."""
+    if not text:
+        return None, False
+
+    is_shiny = re.search(r"\bshiny\b", text, re.IGNORECASE) is not None
+
+    for name in WATCHLIST:
+        # Flexible whitespace supports names such as "Tapu Koko".
+        escaped = re.escape(name).replace(r"\ ", r"\s+")
+        pattern = rf"(?<!\w){escaped}(?!\w)"
+        if re.search(pattern, text, re.IGNORECASE):
+            return name, is_shiny
+
+    if is_shiny:
+        return "Shiny Pokémon", True
+
+    return None, False
+
+
+def build_notification(name, is_shiny, original_text):
+    """Build a Saved Messages alert; this function never clicks game buttons."""
+    level_match = re.search(
+        r"\bLv\.?\s*(\d+)\b", original_text or "", re.IGNORECASE
+    )
+    level = f"Level: {level_match.group(1)}" if level_match else "Level: unknown"
+    shiny_label = "\n✨ SHINY encounter!" if is_shiny else ""
+
+    return (
+        "🛑 HEXAAUTOHUNT PAUSED\n\n"
+        f"Target: {name}\n"
+        f"{level}"
+        f"{shiny_label}\n\n"
+        f"Game message:\n{original_text}\n\n"
+        "The encounter has not been clicked or battled.\n"
+        "After handling it manually, send /resume to continue."
+    )
