@@ -1,21 +1,37 @@
-# Telegram API credentials
-api_id = 21293406  # Your API ID
-api_hash = 'dbaa72e10301db2908f08347c6333602'  # Your API Hash
+import os
 
-# Phone number for authentication
-phone_number = '+251716958387'  # Your phone number in international format
+from dotenv import load_dotenv
 
-# Chat ID
-chat = 1002433318417  # Your chat ID
+load_dotenv()
 
-# List of Pokémon to catch during auto-hunt
-pokemon_to_catch = [
-    "Eternatus", "Zacian", "Dialga", "Palkia", "Mewtwo", "Arceus", "Zamazenta",
-    "Glastrier", "Calyrex", "Kyurem", "Lunala", "Necrozma", "Rayquaza",
-    "Cosmoem", "Yveltal", "Kyogre", "Xerneas", "Cosmog", "Groudon", "Giratina",
-    "Zeraora", "Marshadow", "Buzzwole", "Solgaleo", "Zyagrde", "Slaking",
-    "Metagross", "Beldum", "Slakoth", "Vigoroth", "Garchomp", "Gallade",
-    "Gardevoir", "Dragapult", "Ho-oh", "Lugia", "Reshiram", "Regigigas",
-    "Gengar", "Alakazam", "Greninja", "Salamance", "Charizard", "Blastoise",
-    "Lucario", "Darmanitan"
+api_id_value = os.getenv("TELEGRAM_API_ID", "").strip()
+api_hash = os.getenv("TELEGRAM_API_HASH", "").strip()
+phone_number = os.getenv("TELEGRAM_PHONE_NUMBER", "").strip()
+chat_value = os.getenv("TELEGRAM_GAME_CHAT", "").strip()
+
+missing = [
+    name
+    for name, value in (
+        ("TELEGRAM_API_ID", api_id_value),
+        ("TELEGRAM_API_HASH", api_hash),
+        ("TELEGRAM_PHONE_NUMBER", phone_number),
+        ("TELEGRAM_GAME_CHAT", chat_value),
+    )
+    if not value
 ]
+if missing:
+    raise RuntimeError(
+        "Missing settings in .env: " + ", ".join(missing)
+    )
+
+try:
+    api_id = int(api_id_value)
+except ValueError as exc:
+    raise RuntimeError("TELEGRAM_API_ID must be an integer.") from exc
+
+# TELEGRAM_GAME_CHAT can be a numeric chat ID or a username such as @HeXamonbot.
+chat = int(chat_value) if chat_value.lstrip("-").isdigit() else chat_value
+
+hunt_interval_seconds = float(os.getenv("HUNT_INTERVAL_SECONDS", "10"))
+if hunt_interval_seconds < 3:
+    raise ValueError("HUNT_INTERVAL_SECONDS must be at least 3 seconds.")
