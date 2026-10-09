@@ -1,7 +1,15 @@
-# Ignore Telethon session files
-  session*
+# Local secrets
+.env
+.env.*
+!.env.example
 
-  # Ignore Python cache and virtual environments
-  __pycache__/
-  venv/
-  .env
+# Telethon sessions and journals
+session*
+*.session
+*.session-journal
+
+# Python environments and cache
+__pycache__/
+*.py[cod]
+venv/
+.venv/
